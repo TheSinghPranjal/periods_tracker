@@ -100,10 +100,12 @@ end-to-end encrypted until that has been implemented and tested.
 
 ## App icon and splash
 
-`tool/render_app_icon.dart` draws the icon and launch image with the app's own
-painters; `tool/install_icons.sh` resizes them into both platforms (macOS only).
+The icon masters are in `tool/icon/`: `app_icon_full.png` is opaque and edge to edge for
+iOS, which rounds it itself, and `app_icon_rounded.png` has transparent corners for Android.
+`tool/render_app_icon.dart` draws the launch image; `tool/install_icons.sh` installs
+both on each platform (macOS only).
 
-- Icon master: 1024x1024 PNG. The App Store copy has no alpha channel.
+- Icon masters: 1024x1024 PNG. The iOS master has no alpha channel.
 - Android launcher: 48, 72, 96, 144, 192 px. Launch image: 120 to 480 px.
 - iOS launch image: 160, 320, 480 px on `#FFF8F9`.
 

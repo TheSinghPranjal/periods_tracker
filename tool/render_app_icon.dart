@@ -1,6 +1,6 @@
-// Renders the app icon and launch image from the same painters the app uses.
+// Renders the launch image from the same painter the app uses.
 // Run with: flutter test tool/render_app_icon.dart
-// Then run tool/install_icons.sh to resize and install them.
+// Then run tool/install_icons.sh to install it along with the app icon.
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -26,30 +26,13 @@ Future<void> _save(
 }
 
 void main() {
-  test('render icons', () async {
+  test('render launch image', () async {
     final t = LunaTokens.resolve(AppPalette.blossom, Brightness.light);
     final ink = BlossomInk(
       fill: t.blossom,
       edge: t.blossomEdge,
       core: t.blossomCore,
     );
-    await _save('build/icons/icon.png', 1024, (canvas, s) {
-      canvas.drawRect(
-        Rect.fromLTWH(0, 0, s, s),
-        Paint()
-          ..shader = ui.Gradient.linear(Offset.zero, Offset(s, s), [
-            const Color(0xFFFFF4F7),
-            t.pastel,
-          ]),
-      );
-      canvas.save();
-      canvas.translate(s * 0.14, s * 0.14);
-      LogoPainter(
-        moon: t.periodFill,
-        ink: ink,
-      ).paint(canvas, Size.square(s * 0.72));
-      canvas.restore();
-    });
     await _save('build/icons/launch.png', 480, (canvas, s) {
       LogoPainter(moon: t.periodFill, ink: ink).paint(canvas, Size.square(s));
     });
