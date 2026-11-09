@@ -104,85 +104,135 @@ class SketchCard extends StatelessWidget {
   }
 }
 
-class _SketchButton extends StatefulWidget {
-  const _SketchButton({
+class _PillButton extends StatefulWidget {
+  const _PillButton({
     required this.label,
     required this.onPressed,
-    required this.fill,
     required this.foreground,
-    required this.stroke,
+    this.gradient,
+    this.fill,
+    this.border,
+    this.shadow,
+    this.gloss = false,
     this.icon,
-    this.seed = 5,
+    this.arrow = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
-  final Color fill;
   final Color foreground;
-  final Color stroke;
+  final Gradient? gradient;
+  final Color? fill;
+  final Color? border;
+  final Color? shadow;
+  final bool gloss;
   final IconData? icon;
-  final int seed;
+  final bool arrow;
 
   @override
-  State<_SketchButton> createState() => _SketchButtonState();
+  State<_PillButton> createState() => _PillButtonState();
 }
 
-class _SketchButtonState extends State<_SketchButton> {
+class _PillButtonState extends State<_PillButton> {
+  static const _shape = StadiumBorder();
   bool _down = false;
 
   @override
   Widget build(BuildContext context) {
-    final enabled = widget.onPressed != null;
-    final fg = enabled
-        ? widget.foreground
-        : widget.foreground.withValues(alpha: 0.45);
     return Semantics(
       button: true,
-      enabled: enabled,
+      enabled: widget.onPressed != null,
       child: AnimatedScale(
         scale: _down ? 0.97 : 1,
         duration: const Duration(milliseconds: 150),
-        child: CustomPaint(
-          painter: SketchBoxPainter(
-            fill: enabled ? widget.fill : widget.fill.withValues(alpha: 0.5),
-            stroke: widget.stroke,
-            seed: widget.seed,
-            radius: 18,
-            strokeWidth: 1.5,
+        child: DecoratedBox(
+          decoration: ShapeDecoration(
+            shape: _shape,
+            gradient: widget.gradient,
+            color: widget.fill,
+            shadows: widget.shadow == null
+                ? null
+                : [
+                    BoxShadow(
+                      color: widget.shadow!,
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
           ),
           child: Material(
             color: Colors.transparent,
+            shape: widget.border == null
+                ? _shape
+                : StadiumBorder(
+                    side: BorderSide(color: widget.border!, width: 1.4),
+                  ),
+            clipBehavior: Clip.antiAlias,
             child: InkWell(
-              borderRadius: BorderRadius.circular(18),
               onTap: widget.onPressed,
               onHighlightChanged: (v) => setState(() => _down = v),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 54),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (widget.icon != null) ...[
-                        Icon(widget.icon, color: fg, size: 21),
-                        const SizedBox(width: 8),
-                      ],
-                      Flexible(
-                        child: Text(
-                          widget.label,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelLarge?.copyWith(color: fg),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (widget.gloss)
+                    const Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.center,
+                              colors: [Color(0x33FFFFFF), Color(0x00FFFFFF)],
+                            ),
+                          ),
                         ),
                       ),
-                    ],
+                    ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 58),
+                    child: Padding(
+                      // Equal on both sides so the label stays centred.
+                      padding: EdgeInsets.symmetric(
+                        horizontal: widget.arrow ? 54 : 20,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (widget.icon != null) ...[
+                            Icon(
+                              widget.icon,
+                              color: widget.foreground,
+                              size: 21,
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Flexible(
+                            child: Text(
+                              widget.label,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(
+                                    color: widget.foreground,
+                                    fontSize: 17,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  if (widget.arrow)
+                    Positioned(
+                      right: 22,
+                      child: Icon(
+                        Icons.arrow_forward_rounded,
+                        color: widget.foreground,
+                        size: 26,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -198,21 +248,31 @@ class PrimaryButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.icon,
+    this.arrow = false,
   });
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
 
+  /// Shows a forward arrow; for buttons that move on to the next step.
+  final bool arrow;
+
   @override
   Widget build(BuildContext context) {
     final t = LunaTokens.of(context);
-    return _SketchButton(
+    final enabled = onPressed != null;
+    return _PillButton(
       label: label,
       onPressed: onPressed,
       icon: icon,
-      fill: t.pastel,
-      foreground: t.ink,
-      stroke: t.blossomEdge,
+      arrow: arrow,
+      foreground: enabled ? Colors.white : t.ink.withValues(alpha: 0.55),
+      gloss: enabled,
+      gradient: enabled
+          ? LinearGradient(colors: [t.buttonStart, t.buttonEnd])
+          : null,
+      fill: enabled ? null : t.pastel,
+      shadow: enabled ? t.buttonEnd.withValues(alpha: 0.32) : null,
     );
   }
 }
@@ -233,14 +293,14 @@ class SecondaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = LunaTokens.of(context);
-    return _SketchButton(
+    final accent = destructive ? t.error : t.periodFill;
+    return _PillButton(
       label: label,
       onPressed: onPressed,
       icon: icon,
-      seed: 9,
+      foreground: onPressed == null ? accent.withValues(alpha: 0.45) : accent,
       fill: t.surface,
-      foreground: destructive ? t.error : t.ink,
-      stroke: destructive ? t.error.withValues(alpha: 0.6) : t.line,
+      border: accent.withValues(alpha: onPressed == null ? 0.25 : 0.55),
     );
   }
 }

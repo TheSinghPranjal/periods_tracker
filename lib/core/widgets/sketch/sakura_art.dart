@@ -11,10 +11,14 @@ class BlossomInk {
     required this.fill,
     required this.edge,
     required this.core,
+    this.anther,
   });
   final Color fill;
   final Color edge;
   final Color core;
+
+  /// Pollen tips; defaults to [core].
+  final Color? anther;
 }
 
 Path _petal(double r) {
@@ -84,10 +88,31 @@ void drawBlossom(
       canvas.drawCircle(
         tip,
         math.max(0.8, radius * 0.06),
-        Paint()..color = ink.core,
+        Paint()..color = ink.anther ?? ink.core,
       );
     }
   }
+  canvas.restore();
+}
+
+/// A slim pointed leaf growing from [at] in the direction of [angle].
+void drawLeaf(
+  Canvas canvas,
+  Offset at,
+  double length,
+  double angle,
+  Color color,
+) {
+  final w = length * 0.3;
+  final path = Path()
+    ..moveTo(0, 0)
+    ..quadraticBezierTo(length * 0.45, -w, length, 0)
+    ..quadraticBezierTo(length * 0.45, w, 0, 0)
+    ..close();
+  canvas.save();
+  canvas.translate(at.dx, at.dy);
+  canvas.rotate(angle);
+  canvas.drawPath(path, Paint()..color = color);
   canvas.restore();
 }
 
@@ -229,6 +254,9 @@ enum BackdropStyle {
 
   /// The full tree composition for splash and onboarding.
   full,
+
+  /// Corner blossoms over soft hills, leaving the middle clear for content.
+  meadow,
 }
 
 /// The sumi-ink cherry tree behind every screen.
@@ -269,6 +297,10 @@ class _BackdropPainter extends CustomPainter {
   ui.Picture _record(Size size) {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
+    if (style == BackdropStyle.meadow) {
+      _paintMeadow(canvas, size);
+      return recorder.endRecording();
+    }
     final random = math.Random(11);
     final w = size.width;
     final h = size.height;
@@ -324,6 +356,134 @@ class _BackdropPainter extends CustomPainter {
       );
     }
     return recorder.endRecording();
+  }
+
+  void _paintMeadow(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final full = Offset.zero & size;
+    canvas.drawRect(
+      full,
+      Paint()
+        ..shader = ui.Gradient.linear(Offset.zero, Offset(0, h), [
+          Color.lerp(tokens.paper, tokens.pale, 0.55)!,
+          tokens.pale,
+        ]),
+    );
+
+    Path hill(double left, double midY, double right) => Path()
+      ..moveTo(0, left)
+      ..cubicTo(w * 0.3, midY + 26, w * 0.42, midY - 22, w * 0.62, midY)
+      ..cubicTo(w * 0.8, midY + 18, w * 0.9, right + 8, w, right)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+    canvas.drawPath(
+      hill(h - 92, h - 150, h - 178),
+      Paint()..color = tokens.blossom.withValues(alpha: 0.38),
+    );
+    canvas.drawPath(
+      hill(h - 62, h - 112, h - 130),
+      Paint()..color = tokens.blossom.withValues(alpha: 0.5),
+    );
+
+    final ink = BlossomInk(
+      fill: Color.lerp(tokens.blossom, tokens.blossomEdge, 0.35)!,
+      edge: tokens.blossomEdge,
+      core: tokens.blossomCore,
+      anther: const Color(0xFFE9B44C),
+    );
+    final bark = tokens.branch;
+    const leaf = Color(0xFF93AC6C);
+    final random = math.Random(5);
+
+    // Top-right corner.
+    for (final limb in [
+      _Limb(
+        Offset(w + 6, 34),
+        Offset(w - 40, 16),
+        Offset(w - 80, 10),
+        Offset(w - 128, -4),
+        5,
+      ),
+      _Limb(
+        Offset(w - 6, 30),
+        Offset(w - 14, 70),
+        Offset(w - 24, 110),
+        Offset(w - 30, 146),
+        3.5,
+      ),
+    ]) {
+      _drawLimb(canvas, limb, bark, random);
+    }
+    for (final (dx, y, a) in const [
+      (92.0, 8.0, 2.6),
+      (46.0, 42.0, 0.5),
+      (14.0, 92.0, 2.9),
+      (40.0, 128.0, 0.2),
+    ]) {
+      drawLeaf(canvas, Offset(w - dx, y), 15, a, leaf);
+    }
+    for (final (dx, y, r) in const [
+      (112.0, 14.0, 12.0),
+      (58.0, 18.0, 21.0),
+      (12.0, 18.0, 19.0),
+      (28.0, 62.0, 24.0),
+      (32.0, 116.0, 20.0),
+    ]) {
+      drawBlossom(canvas, Offset(w - dx, y), r, dx / 20, ink);
+    }
+    canvas.drawCircle(
+      Offset(w - 70, 62),
+      6,
+      Paint()..color = tokens.blossomEdge,
+    );
+    drawPetal(canvas, Offset(w - 42, 160), 7, 0.6, ink);
+
+    // Bottom-left corner.
+    final low = h - 88;
+    for (final limb in [
+      _Limb(
+        Offset(-6, low),
+        Offset(38, low - 24),
+        Offset(84, low - 44),
+        Offset(134, low - 58),
+        5,
+      ),
+      _Limb(
+        Offset(26, low - 20),
+        Offset(36, low - 50),
+        Offset(30, low - 76),
+        Offset(36, low - 104),
+        3,
+      ),
+    ]) {
+      _drawLimb(canvas, limb, bark, random);
+    }
+    for (final (x, y, a) in [
+      (36.0, low - 90, -2.4),
+      (34.0, low - 72, -0.5),
+      (78.0, low - 40, 0.7),
+      (108.0, low - 50, -2.2),
+    ]) {
+      drawLeaf(canvas, Offset(x, y), 15, a, leaf);
+    }
+    for (final (x, y, r) in [
+      (48.0, low - 58, 23.0),
+      (16.0, low - 30, 23.0),
+      (102.0, low - 28, 13.0),
+      (124.0, low - 62, 15.0),
+      (58.0, low - 14, 16.0),
+    ]) {
+      drawBlossom(canvas, Offset(x, y), r, x / 30, ink);
+    }
+    canvas.drawCircle(
+      Offset(62, low - 100),
+      6,
+      Paint()..color = tokens.blossomEdge,
+    );
+    drawPetal(canvas, Offset(w - 54, h - 178), 8, 0.9, ink);
+    drawPetal(canvas, Offset(w - 86, h - 162), 6, 1.5, ink);
   }
 
   void _washiFibres(Canvas canvas, Size size, math.Random random) {

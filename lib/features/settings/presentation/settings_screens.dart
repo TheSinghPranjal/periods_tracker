@@ -222,6 +222,32 @@ class TrackingModulesScreen extends ConsumerWidget {
           'Everything here is optional and off by default. Turned-on sections appear on the Log page.',
       showBack: true,
       children: [
+        const SectionTitle('Your goals'),
+        SketchCard(
+          seed: 8,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Column(
+            children: [
+              for (final (goal, label) in const [
+                (TrackingGoal.understandCycle, 'Understand my cycle'),
+                (TrackingGoal.symptomsAndMoods, 'Track symptoms and moods'),
+                (TrackingGoal.planPregnancy, 'Plan for pregnancy'),
+                (TrackingGoal.justPeriod, 'Just track my period'),
+              ])
+                SwitchTile(
+                  title: label,
+                  value: s.goals.contains(goal),
+                  onChanged: (v) => repo.patch({
+                    'goals': [
+                      for (final g in {...s.goals, goal})
+                        if (g != goal || v) g.name,
+                    ],
+                  }),
+                ),
+            ],
+          ),
+        ),
+        const SectionTitle('Optional sections'),
         SketchCard(
           seed: 9,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

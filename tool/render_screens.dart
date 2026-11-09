@@ -51,6 +51,13 @@ void main() {
     'profile': const ProfileScreen(),
     'privacy': const PrivacyScreen(),
     'onboarding': const OnboardingScreen(),
+    'goals': const OnboardingScreen(),
+    'lastperiod': const OnboardingScreen(),
+    'periodlength': const OnboardingScreen(),
+    'cyclelength': const OnboardingScreen(),
+    'regularity': const OnboardingScreen(),
+    'reminders': const OnboardingScreen(),
+    'privacyintro': const OnboardingScreen(),
   };
 
   for (final dark in [false, true]) {
@@ -58,7 +65,11 @@ void main() {
       if (dark && !{'home', 'calendar'}.contains(entry.key)) continue;
       testWidgets('render ${entry.key} dark=$dark', (tester) async {
         useTallScreen(tester, height: 860);
-        tester.view.physicalSize = const Size(393 * 3, 860 * 3);
+        tester.view.physicalSize = const Size(393 * 3, 852 * 3);
+        tester.view.padding = const FakeViewPadding(
+          top: 59 * 3,
+          bottom: 34 * 3,
+        );
         final db = memoryDatabase();
         await tester.runAsync(() => seedHistory(db));
         final key = GlobalKey();
@@ -79,6 +90,31 @@ void main() {
             () => Future<void>.delayed(const Duration(milliseconds: 30)),
           );
           await tester.pump(const Duration(milliseconds: 100));
+        }
+        if (const {
+          'goals',
+          'lastperiod',
+          'periodlength',
+          'cyclelength',
+          'regularity',
+          'reminders',
+          'privacyintro',
+        }.contains(entry.key)) {
+          await tester.tap(find.text('Get Started'));
+          await tester.pump(const Duration(milliseconds: 400));
+          final extra = const {
+            'goals': 0,
+            'lastperiod': 1,
+            'periodlength': 2,
+            'cyclelength': 3,
+            'regularity': 4,
+            'reminders': 5,
+            'privacyintro': 6,
+          }[entry.key]!;
+          for (var i = 0; i < extra; i++) {
+            await tester.tap(find.text('Continue'));
+            await tester.pump(const Duration(milliseconds: 400));
+          }
         }
         await tester.pump(const Duration(seconds: 1));
         await tester.runAsync(() async {

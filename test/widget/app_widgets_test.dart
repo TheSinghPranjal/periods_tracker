@@ -5,6 +5,7 @@ import 'package:periods_tracker/app/app.dart';
 import 'package:periods_tracker/app/theme/app_theme.dart';
 import 'package:periods_tracker/core/database/app_database.dart';
 import 'package:periods_tracker/core/encryption/secure_store.dart';
+import 'package:periods_tracker/core/notifications/notification_gateway.dart';
 import 'package:periods_tracker/core/security/app_lock_service.dart';
 import 'package:periods_tracker/core/utils/calendar_date.dart';
 import 'package:periods_tracker/features/calendar/presentation/calendar_screen.dart';
@@ -293,7 +294,7 @@ void main() {
       );
       await settle(tester);
 
-      expect(find.text('Your cycle, your way.'), findsOneWidget);
+      expect(find.text('Your Cycle, Your Way'), findsOneWidget);
       await tester.tap(find.text('Get Started'));
       await settle(tester, 2);
       await tester.tap(find.text('Just track my period'));
@@ -323,6 +324,63 @@ void main() {
       expect(periods, isEmpty);
       await disposeApp(tester, db);
     });
+
+    testWidgets('cycle length grid reaches values beyond its first page', (
+      tester,
+    ) async {
+      useTallScreen(tester, height: 1000);
+      final db = memoryDatabase();
+      await tester.pumpWidget(
+        testScope(overrides: testOverrides(db), child: _Router()),
+      );
+      await settle(tester);
+      await tester.tap(find.text('Get Started'));
+      await settle(tester, 2);
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.text('Continue'));
+        await settle(tester, 2);
+      }
+      expect(find.text('How long is your'), findsOneWidget);
+      expect(find.text('17'), findsOneWidget);
+      expect(find.text('35'), findsNothing);
+      await tester.tap(find.byTooltip('Larger numbers'));
+      await settle(tester, 8);
+      await tester.tap(find.text('35'));
+      await settle(tester, 2);
+      // Once in the large value display, once on the grid.
+      expect(find.text('35'), findsNWidgets(2));
+      await disposeApp(tester, db);
+    });
+
+    testWidgets(
+      'a denied notification permission leaves the reminder off and explains why',
+      (tester) async {
+        useTallScreen(tester, height: 1000);
+        final db = memoryDatabase();
+        final gateway = NoopNotificationGateway()..permission = false;
+        await tester.pumpWidget(
+          testScope(
+            overrides: testOverrides(db, notifications: gateway),
+            child: _Router(),
+          ),
+        );
+        await settle(tester);
+        await tester.tap(find.text('Get Started'));
+        await settle(tester, 2);
+        for (var i = 0; i < 5; i++) {
+          await tester.tap(find.text('Continue'));
+          await settle(tester, 2);
+        }
+        expect(find.textContaining('discreet by default'), findsOneWidget);
+        await tester.tap(find.text('Upcoming period'));
+        await settle(tester, 2);
+        expect(
+          find.textContaining('can\'t be switched on yet'),
+          findsOneWidget,
+        );
+        await disposeApp(tester, db);
+      },
+    );
 
     testWidgets('choosing pregnancy planning shows the warning', (
       tester,
@@ -389,6 +447,17 @@ void main() {
         await disposeApp(tester, db);
       },
     );
+  });
+
+  group('goals', () {
+    testWidgets('can be changed later in settings', (tester) async {
+      final db = await open(tester, const TrackingModulesScreen());
+      await tester.tap(find.text('Track symptoms and moods'));
+      await settle(tester);
+      final s = await tester.runAsync(() => DriftSettingsRepository(db).get());
+      expect(s!.goals, {TrackingGoal.symptomsAndMoods});
+      await disposeApp(tester, db);
+    });
   });
 
   group('background privacy', () {

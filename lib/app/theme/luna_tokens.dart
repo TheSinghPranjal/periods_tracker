@@ -31,6 +31,9 @@ class LunaTokens extends ThemeExtension<LunaTokens> {
     required this.error,
     required this.heroStart,
     required this.heroEnd,
+    required this.buttonStart,
+    required this.buttonEnd,
+    required this.heading,
   });
 
   final Color paper;
@@ -60,6 +63,13 @@ class LunaTokens extends ThemeExtension<LunaTokens> {
   final Color error;
   final Color heroStart;
   final Color heroEnd;
+
+  /// Gradient ends for primary buttons; white text sits on them.
+  final Color buttonStart;
+  final Color buttonEnd;
+
+  /// Deep wine used for prominent headings on the paper background.
+  final Color heading;
 
   static LunaTokens of(BuildContext context) =>
       Theme.of(context).extension<LunaTokens>()!;
@@ -93,6 +103,9 @@ class LunaTokens extends ThemeExtension<LunaTokens> {
         error: const Color(0xFFB3283F),
         heroStart: hue.pastel,
         heroEnd: hue.pale,
+        buttonStart: hue.buttonStart,
+        buttonEnd: hue.buttonEnd,
+        heading: Color.lerp(hue.buttonEnd, const Color(0xFF000000), 0.62)!,
       );
     }
     return LunaTokens(
@@ -121,6 +134,9 @@ class LunaTokens extends ThemeExtension<LunaTokens> {
       error: const Color(0xFFFF9AA9),
       heroStart: Color.lerp(hue.deep, const Color(0xFF2A232B), 0.45)!,
       heroEnd: const Color(0xFF332A35),
+      buttonStart: hue.buttonStart,
+      buttonEnd: hue.buttonEnd,
+      heading: const Color(0xFFF6EDF1),
     );
   }
 
@@ -141,8 +157,11 @@ class _Hue {
     required this.deep,
     required this.pastel,
     required this.pale,
+    required this.buttonStart,
+    required this.buttonEnd,
   });
   final Color paper, line, blossom, edge, deep, pastel, pale;
+  final Color buttonStart, buttonEnd;
 }
 
 const _hues = <AppPalette, _Hue>{
@@ -154,6 +173,8 @@ const _hues = <AppPalette, _Hue>{
     deep: Color(0xFFB84A72),
     pastel: Color(0xFFF8C6D6),
     pale: Color(0xFFFDEBF1),
+    buttonStart: Color(0xFFD9557A),
+    buttonEnd: Color(0xFF9E1F59),
   ),
   AppPalette.lavender: _Hue(
     paper: Color(0xFFFBF8FE),
@@ -163,6 +184,8 @@ const _hues = <AppPalette, _Hue>{
     deep: Color(0xFF7354A6),
     pastel: Color(0xFFDCCDF2),
     pale: Color(0xFFF2ECFA),
+    buttonStart: Color(0xFF8F6CC4),
+    buttonEnd: Color(0xFF5B3D92),
   ),
   AppPalette.sage: _Hue(
     paper: Color(0xFFF8FBF8),
@@ -172,6 +195,8 @@ const _hues = <AppPalette, _Hue>{
     deep: Color(0xFF3F7A5C),
     pastel: Color(0xFFC6E2D2),
     pale: Color(0xFFEAF4EE),
+    buttonStart: Color(0xFF5A9A78),
+    buttonEnd: Color(0xFF2F6A4C),
   ),
   AppPalette.momiji: _Hue(
     paper: Color(0xFFFFF9F5),
@@ -181,6 +206,8 @@ const _hues = <AppPalette, _Hue>{
     deep: Color(0xFFA94A26),
     pastel: Color(0xFFF7CDB4),
     pale: Color(0xFFFDEEE4),
+    buttonStart: Color(0xFFC9623A),
+    buttonEnd: Color(0xFF8C3A1A),
   ),
   AppPalette.plum: _Hue(
     paper: Color(0xFFFCF7FA),
@@ -190,5 +217,7 @@ const _hues = <AppPalette, _Hue>{
     deep: Color(0xFF8A3F6B),
     pastel: Color(0xFFE7C7DB),
     pale: Color(0xFFF7EBF2),
+    buttonStart: Color(0xFFA9548A),
+    buttonEnd: Color(0xFF6E2C55),
   ),
 };
