@@ -119,26 +119,52 @@ class LockScreen extends ConsumerStatefulWidget {
   ConsumerState<LockScreen> createState() => _LockScreenState();
 }
 
-class _LockScreenState extends ConsumerState<LockScreen> {
+class _LockScreenState extends ConsumerState<LockScreen>
+    with WidgetsBindingObserver {
   String _pin = '';
   String? _message;
   bool _busy = false;
   bool _biometricTried = false;
+  bool _prompting = false;
+  bool _wasBackgrounded = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryBiometric());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // The prompt itself only makes the app inactive, so this cannot loop.
+    if (state == AppLifecycleState.paused) _wasBackgrounded = true;
+    if (state == AppLifecycleState.resumed && _wasBackgrounded) {
+      _wasBackgrounded = false;
+      _biometricTried = false;
+      unawaited(_tryBiometric());
+    }
   }
 
   Future<void> _tryBiometric() async {
     final lock = ref.read(appLockProvider);
-    if (!lock.biometric || _biometricTried || !mounted) return;
+    if (!lock.biometric || _biometricTried || _prompting || !mounted) return;
+    // The app locks as it goes to the background; a prompt can't show there.
+    final appState = WidgetsBinding.instance.lifecycleState;
+    if (appState != null && appState != AppLifecycleState.resumed) return;
     _biometricTried = true;
+    _prompting = true;
     final notifier = ref.read(appLockProvider.notifier);
     final ok = await notifier.withoutLocking(
       () => ref.read(biometricsProvider).authenticate('Unlock LunaCycle'),
     );
+    _prompting = false;
     if (ok && mounted) notifier.unlock();
   }
 

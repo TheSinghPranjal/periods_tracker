@@ -311,10 +311,19 @@ class ReminderSync {
 
   void schedule() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), _run);
+    _debounce = Timer(const Duration(milliseconds: 400), _safeRun);
   }
 
   void dispose() => _debounce?.cancel();
+
+  Future<void> _safeRun() async {
+    try {
+      await _run();
+    } catch (error) {
+      // Tracking must keep working if the OS refuses to schedule reminders.
+      debugPrint('Reminder sync failed: ${error.runtimeType}');
+    }
+  }
 
   Future<void> _run() async {
     final prediction = _ref.read(predictionProvider);

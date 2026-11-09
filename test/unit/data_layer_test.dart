@@ -292,6 +292,17 @@ void main() {
     });
   });
 
+  test(
+    'backup works through the background helpers at real strength',
+    () async {
+      final sealed = await sealBackupInBackground('{"a":1}', 'a long password');
+      expect(
+        await openBackupInBackground(sealed, 'a long password'),
+        '{"a":1}',
+      );
+    },
+  );
+
   group('encrypted backup', () {
     test('round-trips and hides the content', () async {
       final sealed = await fastKdf.encrypt(

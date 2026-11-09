@@ -13,9 +13,10 @@ full=tool/icon/app_icon_full.png
 rounded=tool/icon/app_icon_rounded.png
 
 android=android/app/src/main/res
-for pair in mdpi:48:120 hdpi:72:180 xhdpi:96:240 xxhdpi:144:360 xxxhdpi:192:480; do
-  IFS=: read -r density icon launch <<<"$pair"
+for pair in mdpi:48:120:108 hdpi:72:180:162 xhdpi:96:240:216 xxhdpi:144:360:324 xxxhdpi:192:480:432; do
+  IFS=: read -r density icon launch adaptive <<<"$pair"
   resize "$rounded" "$icon" "$android/mipmap-$density/ic_launcher.png"
+  resize tool/icon/app_icon_foreground.png "$adaptive" "$android/mipmap-$density/ic_launcher_foreground.png"
   resize build/icons/launch.png "$launch" "$android/mipmap-$density/launch_image.png"
 done
 

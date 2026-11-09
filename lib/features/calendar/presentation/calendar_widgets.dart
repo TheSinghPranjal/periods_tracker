@@ -247,7 +247,7 @@ class CalendarLegend extends StatelessWidget {
               ),
             ),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
+              constraints: const BoxConstraints(minHeight: 48),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Row(

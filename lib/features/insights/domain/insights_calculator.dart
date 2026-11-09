@@ -58,6 +58,7 @@ class InsightsData {
     this.flowSeries = const [],
     this.temperatureSeries = const [],
     this.weightSeries = const [],
+    this.sleepSeries = const [],
     this.symptomCounts = const [],
     this.moodCounts = const [],
     this.statements = const [],
@@ -76,6 +77,7 @@ class InsightsData {
   final List<SeriesPoint> flowSeries;
   final List<SeriesPoint> temperatureSeries;
   final List<SeriesPoint> weightSeries;
+  final List<SeriesPoint> sleepSeries;
   final List<CountEntry> symptomCounts;
   final List<CountEntry> moodCounts;
   final List<String> statements;
@@ -247,6 +249,10 @@ InsightsData computeInsights({
     weightSeries: [
       for (final d in recentDays)
         if (d.log?.weightKg != null) SeriesPoint(d.date, d.log!.weightKg!),
+    ],
+    sleepSeries: [
+      for (final d in recentDays)
+        if (d.log?.sleepHours != null) SeriesPoint(d.date, d.log!.sleepHours!),
     ],
     symptomCounts: symptomCounts,
     moodCounts: moodCounts,

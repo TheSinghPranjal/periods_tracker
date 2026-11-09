@@ -79,6 +79,9 @@ void main() {
       await wait(tester);
     }
     await tester.tap(find.text('Open My Calendar'));
+    await waitFor(tester, find.text('Home'));
+    await wait(tester);
+    await tester.tap(find.text('Home'));
     await waitFor(tester, find.text('Let\'s learn your cycle.'));
 
     // The database must be encrypted on disk.

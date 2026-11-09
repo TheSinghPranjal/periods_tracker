@@ -314,6 +314,17 @@ void main() {
     expect(r.confidence, PredictionConfidence.low);
   });
 
+  test('manual adjustment moves only the next period', () {
+    final r = engine.predict(
+      PredictionInput(
+        periods: startsEvery(CalendarDate(2025, 1, 1), [28, 28, 28, 28]),
+        today: CalendarDate(2025, 5, 3),
+        manualNextStart: CalendarDate(2025, 6, 2),
+      ),
+    );
+    expect(r.projectedPeriods[1].first, CalendarDate(2025, 6, 30));
+  });
+
   test('period length excludes long bleeding episodes from the average', () {
     final first = CalendarDate(2025, 1, 1);
     final r = engine.predict(

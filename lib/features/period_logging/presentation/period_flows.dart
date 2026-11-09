@@ -65,6 +65,8 @@ Future<void> logPeriodOn(
   final repo = ref.read(periodRepositoryProvider);
   final dates = ref.read(lunaDatesProvider);
   final today = ref.read(todayProvider);
+  // Read now: the caller's widget may be gone by the time a dialog returns.
+  final usual = ref.read(currentSettingsProvider).usualPeriodLength ?? 5;
   final periods = (await repo.getAll()).map(spanOf).toList();
   if (!context.mounted) return;
 
@@ -127,7 +129,6 @@ Future<void> logPeriodOn(
         );
       }
     case CloseOngoingAndStart(:final ongoing):
-      final usual = ref.read(currentSettingsProvider).usualPeriodLength ?? 5;
       final closeOn = CalendarDate.fromEpochDay(
         math.min(
           ongoing.start.plusDays(usual - 1).epochDay,
@@ -154,12 +155,31 @@ Future<void> logPeriodOn(
         }, 'New period started.');
       }
     case StartNewPeriod():
+      // A past period can't be left open: it would run up to today and
+      // collide with anything logged since. Assume the usual length instead.
+      final later =
+          periods
+              .where((p) => p.start.isAfter(date))
+              .map((p) => p.start)
+              .toList()
+            ..sort();
+      var end = date.plusDays(usual - 1);
+      if (later.isNotEmpty && !end.isBefore(later.first)) {
+        end = later.first.minusDays(1);
+      }
+      final assumedEnd = end.isBefore(today) ? end : null;
       try {
-        final record = await repo.add(start: date, today: today);
+        final record = await repo.add(
+          start: date,
+          end: assumedEnd,
+          today: today,
+        );
         if (context.mounted) {
           showMessage(
             context,
-            'Period started on ${dates.short(date)}.',
+            assumedEnd == null
+                ? 'Period started on ${dates.short(date)}.'
+                : 'Period started on ${dates.short(date)}, ending ${dates.short(assumedEnd)}. You can edit this.',
             onUndo: () => repo.delete(record.id),
           );
         }
@@ -216,6 +236,7 @@ Future<void> deletePeriodFlow(
   PeriodRecord record,
 ) async {
   final dates = ref.read(lunaDatesProvider);
+  final repo = ref.read(periodRepositoryProvider);
   final ok = await confirmAction(
     context,
     title: 'Delete this period?',
@@ -226,7 +247,6 @@ Future<void> deletePeriodFlow(
     destructive: true,
   );
   if (!ok) return;
-  final repo = ref.read(periodRepositoryProvider);
   final removed = await repo.delete(record.id);
   if (context.mounted && removed != null) {
     showMessage(
@@ -245,14 +265,25 @@ Future<void> showPeriodEditor(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) =>
-        PeriodEditorSheet(record: record, initialStart: initialStart),
+    builder: (_) => PeriodEditorSheet(
+      record: record,
+      initialStart: initialStart,
+      hostContext: context,
+    ),
   );
 }
 
 /// Date-range editor for adding a past period or correcting an existing one.
 class PeriodEditorSheet extends ConsumerStatefulWidget {
-  const PeriodEditorSheet({super.key, this.record, this.initialStart});
+  const PeriodEditorSheet({
+    super.key,
+    this.record,
+    this.initialStart,
+    required this.hostContext,
+  });
+
+  /// Stays alive after this sheet closes, for dialogs and messages.
+  final BuildContext hostContext;
   final PeriodRecord? record;
   final CalendarDate? initialStart;
 
@@ -377,8 +408,9 @@ class _PeriodEditorSheetState extends ConsumerState<PeriodEditorSheet> {
                 style: TextButton.styleFrom(foregroundColor: t.error),
                 onPressed: () async {
                   final record = widget.record!;
+                  final host = widget.hostContext;
                   Navigator.pop(context);
-                  await deletePeriodFlow(context, ref, record);
+                  await deletePeriodFlow(host, ref, record);
                 },
                 child: const Text('Delete this period'),
               ),

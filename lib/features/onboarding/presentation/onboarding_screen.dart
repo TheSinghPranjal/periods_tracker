@@ -55,7 +55,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     6: ('Would you like', 'reminders?', 28.0),
   };
 
-  bool get _meadowStep => _step >= 1 && _step <= 7;
+  bool get _meadowStep => _step >= 1;
   final _draft = _Draft();
   int _step = 0;
   bool _saving = false;
@@ -95,42 +95,48 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _finish() async {
     setState(() => _saving = true);
-    final d = _draft;
-    final today = ref.read(todayProvider);
-    final settings = AppSettings(
-      onboardingCompleted: true,
-      nickname: d.nickname.trim().isEmpty ? null : d.nickname.trim(),
-      goals: d.goals,
-      usualCycleLength: d.cycleLength,
-      usualPeriodLength: d.periodLength,
-      regularity: d.regularity,
-      fertilityEstimatesEnabled: d.fertility,
-    );
-    final last = d.lastPeriod;
-    if (last != null) {
-      // Older than the usual length: it has ended. Otherwise leave it open
-      // so nothing is claimed about a period that may still be going.
-      CalendarDate? end;
-      final usual = d.periodLength;
-      if (usual != null && last.plusDays(usual - 1).isBefore(today)) {
-        end = last.plusDays(usual - 1);
+    try {
+      final d = _draft;
+      final today = ref.read(todayProvider);
+      final settings = AppSettings(
+        onboardingCompleted: true,
+        nickname: d.nickname.trim().isEmpty ? null : d.nickname.trim(),
+        goals: d.goals,
+        usualCycleLength: d.cycleLength,
+        usualPeriodLength: d.periodLength,
+        regularity: d.regularity,
+        fertilityEstimatesEnabled: d.fertility,
+      );
+      final last = d.lastPeriod;
+      if (last != null) {
+        // Older than the usual length: it has ended. Otherwise leave it open
+        // so nothing is claimed about a period that may still be going.
+        CalendarDate? end;
+        final usual = d.periodLength;
+        if (usual != null && last.plusDays(usual - 1).isBefore(today)) {
+          end = last.plusDays(usual - 1);
+        }
+        await ref
+            .read(periodRepositoryProvider)
+            .add(start: last, end: end, source: 'onboarding', today: today);
       }
-      await ref
-          .read(periodRepositoryProvider)
-          .add(start: last, end: end, source: 'onboarding', today: today);
+      final db = ref.read(databaseProvider);
+      Future<void> enable(String id, bool on) =>
+          (db.update(db.reminders)..where((t) => t.id.equals(id))).write(
+            RemindersCompanion(enabled: Value(on)),
+          );
+      await enable('period', d.remindPeriod);
+      await enable('daily', d.remindDaily);
+      await enable('fertile', d.remindFertile && d.fertility);
+      await ref.read(settingsRepositoryProvider).save(settings);
+      if (!mounted) return;
+      context.go('/calendar');
+      if (d.remindMedication) context.push('/medications');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showMessage(context, 'That couldn\'t be saved. Please try again.');
     }
-    final db = ref.read(databaseProvider);
-    Future<void> enable(String id, bool on) =>
-        (db.update(db.reminders)..where((t) => t.id.equals(id))).write(
-          RemindersCompanion(enabled: Value(on)),
-        );
-    await enable('period', d.remindPeriod);
-    await enable('daily', d.remindDaily);
-    await enable('fertile', d.remindFertile && d.fertility);
-    await ref.read(settingsRepositoryProvider).save(settings);
-    if (!mounted) return;
-    context.go('/home');
-    if (d.remindMedication) context.push('/medications');
   }
 
   List<(String, String?, List<Widget>)> _pages(BuildContext context) {
@@ -228,7 +234,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         (
           TrackingGoal.understandCycle,
           'Understand my cycle',
-          'See your cycle patterns, ovulation and key dates.',
+          'See your cycle patterns and key dates.',
           GoalArtKind.calendar,
         ),
         (
@@ -544,8 +550,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             SakuraBackdrop(
               style: switch (_step) {
                 0 => BackdropStyle.full,
-                1 || 2 || 3 || 4 || 5 || 6 || 7 => BackdropStyle.meadow,
-                _ => BackdropStyle.header,
+                _ => BackdropStyle.meadow,
               },
             ),
             SafeArea(
@@ -663,7 +668,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         ],
                         _step == 7
                             ? const _PrivacyHeading()
-                            : _meadowStep
+                            : _headings.containsKey(_step)
                             ? _TwoLineHeading(lines: _headings[_step]!)
                             : Semantics(
                                 header: true,
@@ -685,7 +690,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           const SizedBox(height: 8),
                           Padding(
                             padding: EdgeInsets.only(
-                              left: _meadowStep && _step != 7 ? 8 : 0,
+                              left: _headings.containsKey(_step) ? 8 : 0,
                             ),
                             child: Text(
                               helper,
@@ -1623,38 +1628,41 @@ class _NumberWheelState extends State<_NumberWheel> {
                 ),
               ],
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: value == null
-                  ? [
-                      Text(
-                        'Not set',
-                        style: text.titleLarge?.copyWith(color: accent),
-                      ),
-                    ]
-                  : [
-                      Text(
-                        '$value',
-                        style: text.displayMedium?.copyWith(
-                          fontFamily: kBodyFont,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 42,
-                          color: accent,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: value == null
+                    ? [
+                        Text(
+                          'Not set',
+                          style: text.titleLarge?.copyWith(color: accent),
                         ),
-                      ),
-                      const SizedBox(width: 9),
-                      Text(
-                        unit,
-                        style: text.titleLarge?.copyWith(
-                          fontFamily: kBodyFont,
-                          fontWeight: FontWeight.w800,
-                          color: accent,
+                      ]
+                    : [
+                        Text(
+                          '$value',
+                          style: text.displayMedium?.copyWith(
+                            fontFamily: kBodyFont,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 42,
+                            color: accent,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 9),
+                        Text(
+                          unit,
+                          style: text.titleLarge?.copyWith(
+                            fontFamily: kBodyFont,
+                            fontWeight: FontWeight.w800,
+                            color: accent,
+                          ),
+                        ),
+                      ],
+              ),
             ),
           ),
         ),
@@ -1670,11 +1678,13 @@ class _NumberWheelState extends State<_NumberWheel> {
             children: [
               Icon(Icons.edit_rounded, size: 15, color: t.heading),
               const SizedBox(width: 7),
-              Text(
-                'Editable any time',
-                style: text.bodyMedium?.copyWith(
-                  color: t.inkSoft,
-                  fontWeight: FontWeight.w600,
+              Flexible(
+                child: Text(
+                  'Editable any time',
+                  style: text.bodyMedium?.copyWith(
+                    color: t.inkSoft,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

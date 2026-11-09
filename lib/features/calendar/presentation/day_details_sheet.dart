@@ -10,6 +10,8 @@ import '../../../core/widgets/sketch/sketch_card.dart';
 import '../../../core/widgets/sketch/sketch_marks.dart';
 import '../../onboarding/presentation/onboarding_screen.dart'
     show kFertilityWarning;
+import '../../period_logging/data/period_repository.dart' show spanOf;
+import '../../period_logging/domain/period_rules.dart' show isForgottenOngoing;
 import '../../period_logging/presentation/period_flows.dart';
 import '../../symptoms/domain/symptom_catalog.dart';
 import 'calendar_widgets.dart';
@@ -18,12 +20,19 @@ Future<void> showDayDetails(BuildContext context, CalendarDate date) =>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => DayDetailsSheet(date: date),
+      builder: (_) => DayDetailsSheet(date: date, hostContext: context),
     );
 
 class DayDetailsSheet extends ConsumerWidget {
-  const DayDetailsSheet({super.key, required this.date});
+  const DayDetailsSheet({
+    super.key,
+    required this.date,
+    required this.hostContext,
+  });
   final CalendarDate date;
+
+  /// Stays alive after this sheet closes, for what happens next.
+  final BuildContext hostContext;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,6 +46,7 @@ class DayDetailsSheet extends ConsumerWidget {
     final isFuture = date.isAfter(today);
     final inPeriod = periods
         .where((p) => date.isWithin(p.startDate, p.endDate ?? today))
+        .where((p) => !isForgottenOngoing(spanOf(p), date))
         .firstOrNull;
 
     Widget row(String label, Widget value) => Padding(
@@ -123,14 +133,14 @@ class DayDetailsSheet extends ConsumerWidget {
                               label: 'Log Period',
                               onPressed: () {
                                 Navigator.pop(context);
-                                logPeriodOn(context, ref, date);
+                                logPeriodOn(hostContext, ref, date);
                               },
                             )
                           : PrimaryButton(
                               label: 'Edit Period',
                               onPressed: () {
                                 Navigator.pop(context);
-                                showPeriodEditor(context, inPeriod);
+                                showPeriodEditor(hostContext, inPeriod);
                               },
                             ),
                     ),
@@ -140,7 +150,9 @@ class DayDetailsSheet extends ConsumerWidget {
                         label: 'Add Symptoms',
                         onPressed: () {
                           Navigator.pop(context);
-                          context.push('/day/${date.toIso()}?focus=symptoms');
+                          hostContext.push(
+                            '/day/${date.toIso()}?focus=symptoms',
+                          );
                         },
                       ),
                     ),
@@ -154,7 +166,7 @@ class DayDetailsSheet extends ConsumerWidget {
                         label: 'Edit Entry',
                         onPressed: () {
                           Navigator.pop(context);
-                          context.push('/day/${date.toIso()}');
+                          hostContext.push('/day/${date.toIso()}');
                         },
                       ),
                     ),

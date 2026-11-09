@@ -312,6 +312,8 @@ class CyclePredictionEngine {
     }
 
     final predicted = lastStart.plusDays(effectiveLength);
+    // A manual date moves only the next period; later ones keep the usual gap.
+    final repeatLength = cycleLength ?? effectiveLength;
     late CalendarDate earliest;
     late CalendarDate latest;
     if (usesHistory && !useManual) {
@@ -337,7 +339,7 @@ class CyclePredictionEngine {
     final projections = _project(
       predicted: predicted,
       today: today,
-      cycleLength: effectiveLength,
+      cycleLength: repeatLength,
       periodLength: periodLength,
       count: config.projectedCycles,
     );
@@ -346,10 +348,10 @@ class CyclePredictionEngine {
     final windows = <DateSpan>[];
     if (input.fertilityEnabled && overdue == 0) {
       for (var i = 0; i < projections.length; i++) {
-        final start = predicted.plusDays(effectiveLength * i);
+        final start = predicted.plusDays(repeatLength * i);
         final previousStart = i == 0
             ? lastStart
-            : predicted.plusDays(effectiveLength * (i - 1));
+            : predicted.plusDays(repeatLength * (i - 1));
         final widen = i == 0 ? earliest.daysUntil(predicted) : 0;
         final widenLate = i == 0 ? predicted.daysUntil(latest) : 0;
         final ovulation = start.minusDays(config.lutealDays);

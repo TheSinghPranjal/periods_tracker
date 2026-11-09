@@ -376,7 +376,10 @@ class _Body extends ConsumerWidget {
               return ChartCard(
                 title: 'Weight',
                 seed: 78,
-                description: summary('Weight', d.weightSeries, 'kilograms'),
+                description: summary('Weight', [
+                  for (final (i, p) in d.weightSeries.indexed)
+                    SeriesPoint(p.date, values[i]),
+                ], usesLb ? 'pounds' : 'kilograms'),
                 rows: [
                   for (final (i, p) in d.weightSeries.indexed)
                     (
@@ -393,6 +396,18 @@ class _Body extends ConsumerWidget {
                 ),
               );
             },
+          ),
+        if (s.trackSleep && d.sleepSeries.length >= 2)
+          ChartCard(
+            title: 'Sleep',
+            seed: 79,
+            description: summary('Sleep', d.sleepSeries, 'hours'),
+            rows: table(d.sleepSeries, 'hours'),
+            chart: TrendLine(
+              values: d.sleepSeries.map((p) => p.value).toList(),
+              labels: d.sleepSeries.map((p) => dates.short(p.date)).toList(),
+              unit: 'hours',
+            ),
           ),
         if (d.cycles.isEmpty)
           Text(

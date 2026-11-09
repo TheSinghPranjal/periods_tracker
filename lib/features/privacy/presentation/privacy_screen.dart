@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:drift/drift.dart' show ComparableExpr;
@@ -111,9 +110,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
     if (password == null) return;
     await _run(() async {
       final json = await ref.read(dataTransferProvider).exportJson();
-      final sealed = await Isolate.run(
-        () => const BackupCipher().encrypt(json, password),
-      );
+      final sealed = await sealBackupInBackground(json, password);
       await _saveBytes('lunacycle-$_stamp.lunabackup', sealed);
     });
   }
@@ -121,16 +118,14 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
   Future<void> _import() async {
     final picked = await _guarded(() => FilePicker.pickFiles());
     if (picked.isEmpty) return;
-    final bytes = await picked.single.readAsBytes();
-    await FilePicker.clearTemporaryFiles();
     await _run(() async {
+      final bytes = await picked.single.readAsBytes();
+      await FilePicker.clearTemporaryFiles();
       var content = '';
       if (BackupCipher.looksEncrypted(bytes)) {
         final password = await _askPassword(confirm: false);
         if (password == null) return;
-        content = await Isolate.run(
-          () => const BackupCipher().decrypt(bytes, password),
-        );
+        content = await openBackupInBackground(bytes, password);
       } else {
         try {
           content = utf8.decode(bytes);

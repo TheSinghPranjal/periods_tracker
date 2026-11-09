@@ -108,6 +108,14 @@ class CannotLogFuture extends LogDayPlan {
   const CannotLogFuture();
 }
 
+/// True when [date] is so long after an unended period's start that it is more
+/// likely a new period than the same one: the shortest plausible cycle.
+bool isForgottenOngoing(
+  PeriodSpan period,
+  CalendarDate date, {
+  int minCycle = 15,
+}) => period.end == null && period.start.daysUntil(date) >= minCycle;
+
 /// Decides what "log a period on this day" should mean, given existing
 /// records. A gap of up to [bridgeDays] counts as the same bleeding episode.
 LogDayPlan planLogDay({
@@ -120,6 +128,7 @@ LogDayPlan planLogDay({
   final sorted = [...periods]..sort((a, b) => a.start.compareTo(b.start));
 
   for (final period in sorted) {
+    if (isForgottenOngoing(period, date)) return CloseOngoingAndStart(period);
     if (period.contains(date, today)) return AlreadyInPeriod(period);
   }
   for (final period in sorted) {

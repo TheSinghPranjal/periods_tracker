@@ -176,7 +176,7 @@ class _Content extends ConsumerWidget {
               ),
             ),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
+              constraints: const BoxConstraints(minHeight: 48),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

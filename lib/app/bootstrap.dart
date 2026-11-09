@@ -22,8 +22,17 @@ class AppBootstrap {
 
   Future<AppDatabase> run() async {
     final file = await databaseFile();
-    if (!file.existsSync()) await _clearLeftoverSecrets();
-    var key = await store.read(kDatabaseKeyName);
+    String? key;
+    try {
+      if (!file.existsSync()) await _clearLeftoverSecrets();
+      key = await store.read(kDatabaseKeyName);
+    } catch (error) {
+      debugPrint('Secure storage failed: ${error.runtimeType}');
+      throw const AppFailure(
+        FailureKind.encryptionKeyLost,
+        'The key that unlocks your data could not be read from this device.',
+      );
+    }
     if (key == null) {
       if (file.existsSync() && file.lengthSync() > 0) {
         throw const AppFailure(

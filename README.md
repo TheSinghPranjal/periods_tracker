@@ -116,6 +116,7 @@ end-to-end encrypted until that has been implemented and tested.
 
 The icon masters are in `tool/icon/`: `app_icon_full.png` is opaque and edge to edge for
 iOS, which rounds it itself, and `app_icon_rounded.png` has transparent corners for Android.
+`app_icon_foreground.png` is the Android adaptive-icon layer.
 `tool/render_app_icon.dart` draws the launch image; `tool/install_icons.sh` installs
 both on each platform (macOS only).
 
@@ -155,5 +156,4 @@ colour themes, dark mode, in-app instructions, offline health articles.
 - Translations. Interface text is written in English directly in the widgets.
 - Cloud backup or multi-device sync (see above).
 - Importing CSV files. CSV is export-only; JSON and encrypted backups can be imported.
-- A sleep chart. Sleep values are saved and exported but not charted.
 - Premium reports and extended analysis. Plus currently unlocks two colour themes only.

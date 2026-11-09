@@ -610,6 +610,7 @@ class _RouterState extends State<_Router> {
     routes: [
       GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
       GoRoute(path: '/home', builder: (_, _) => const SizedBox.shrink()),
+      GoRoute(path: '/calendar', builder: (_, _) => const SizedBox.shrink()),
       GoRoute(path: '/medications', builder: (_, _) => const SizedBox.shrink()),
     ],
   );

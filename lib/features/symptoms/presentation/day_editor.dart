@@ -13,6 +13,8 @@ import '../../../core/utils/health_enums.dart';
 import '../../../core/widgets/common.dart';
 import '../../../core/widgets/sketch/sketch_card.dart';
 import '../../../core/widgets/sketch/sketch_marks.dart';
+import '../../period_logging/data/period_repository.dart' show spanOf;
+import '../../period_logging/domain/period_rules.dart' show isForgottenOngoing;
 import '../../period_logging/presentation/period_flows.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/day_entry.dart';
@@ -42,7 +44,15 @@ class _DayEditorState extends ConsumerState<DayEditor> {
   bool _saved = false;
   Timer? _savedTimer;
 
-  DailyLogRepository get _repo => ref.read(dailyLogRepositoryProvider);
+  // Held directly so that a note can still be saved while the page closes,
+  // when ref is no longer usable.
+  late final DailyLogRepository _repo;
+
+  @override
+  void initState() {
+    super.initState();
+    _repo = ref.read(dailyLogRepositoryProvider);
+  }
 
   @override
   void dispose() {
@@ -398,27 +408,76 @@ class _DayEditorState extends ConsumerState<DayEditor> {
         const SectionTitle('Basal body temperature'),
         card(
           51,
-          _NumberField(
-            initial: tempC == null
-                ? null
-                : (usesF ? tempC * 9 / 5 + 32 : tempC),
-            unit: usesF ? '°F' : '°C',
-            decimals: 2,
-            min: usesF ? 93 : 34,
-            max: usesF ? 108 : 42,
-            onSave: (v) {
-              final now = TimeOfDay.now();
-              final minutes =
-                  entry.temperature?.measurementMinutes ??
-                  now.hour * 60 + now.minute;
-              return _save(
-                () => _repo.setTemperature(
-                  widget.date,
-                  v == null ? null : (usesF ? (v - 32) * 5 / 9 : v),
-                  minutes: minutes,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _NumberField(
+                initial: tempC == null
+                    ? null
+                    : (usesF ? tempC * 9 / 5 + 32 : tempC),
+                unit: usesF ? '°F' : '°C',
+                decimals: 2,
+                min: usesF ? 93 : 34,
+                max: usesF ? 108 : 42,
+                onSave: (v) {
+                  final now = TimeOfDay.now();
+                  final minutes =
+                      entry.temperature?.measurementMinutes ??
+                      now.hour * 60 + now.minute;
+                  return _save(
+                    () => _repo.setTemperature(
+                      widget.date,
+                      v == null ? null : (usesF ? (v - 32) * 5 / 9 : v),
+                      minutes: minutes,
+                      notes: entry.temperature?.notes,
+                    ),
+                  );
+                },
+              ),
+              if (entry.temperature != null) ...[
+                SettingsTile(
+                  icon: Icons.schedule_rounded,
+                  title: 'Measured at',
+                  trailing: Text(
+                    LunaDates.time(
+                      context,
+                      entry.temperature!.measurementMinutes ?? 0,
+                    ),
+                  ),
+                  onTap: () async {
+                    final minutes = entry.temperature!.measurementMinutes ?? 0;
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay(
+                        hour: minutes ~/ 60,
+                        minute: minutes % 60,
+                      ),
+                    );
+                    if (picked == null) return;
+                    await _save(
+                      () => _repo.setTemperature(
+                        widget.date,
+                        entry.temperature!.temperatureCelsius,
+                        minutes: picked.hour * 60 + picked.minute,
+                        notes: entry.temperature!.notes,
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+                _AutosaveField(
+                  initial: entry.temperature!.notes ?? '',
+                  hint: 'Notes (optional)',
+                  onSave: (v) => _save(
+                    () => _repo.setTemperature(
+                      widget.date,
+                      entry.temperature!.temperatureCelsius,
+                      minutes: entry.temperature!.measurementMinutes,
+                      notes: v.isEmpty ? null : v,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -636,6 +695,7 @@ class _PeriodStatus extends ConsumerWidget {
     final periods = ref.watch(periodsProvider).value ?? const <PeriodRecord>[];
     final current = periods
         .where((p) => date.isWithin(p.startDate, p.endDate ?? today))
+        .where((p) => !isForgottenOngoing(spanOf(p), date))
         .firstOrNull;
     final text = Theme.of(context).textTheme;
     final dates = ref.watch(lunaDatesProvider);
@@ -850,7 +910,11 @@ class _NumberFieldState extends State<_NumberField> {
       return;
     }
     setState(() => _error = null);
-    if (value != widget.initial) widget.onSave(value);
+    // Compare as displayed, so unit conversion rounding isn't seen as an edit.
+    final unchanged =
+        value.toStringAsFixed(widget.decimals) ==
+        widget.initial?.toStringAsFixed(widget.decimals);
+    if (!unchanged) widget.onSave(value);
   }
 
   @override

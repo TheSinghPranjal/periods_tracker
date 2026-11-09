@@ -116,6 +116,13 @@ void main() {
       expect(plan(CalendarDate(2025, 7, 1), [may]), isA<CannotLogFuture>());
     });
 
+    test('a new start long after an unended period offers to close it', () {
+      final ongoing = PeriodSpan(id: 'o', start: CalendarDate(2025, 5, 20));
+      final r =
+          plan(CalendarDate(2025, 6, 18), [ongoing]) as CloseOngoingAndStart;
+      expect(r.ongoing.id, 'o');
+    });
+
     test('an ongoing period counts through today', () {
       final ongoing = PeriodSpan(id: 'o', start: CalendarDate(2025, 6, 18));
       expect(

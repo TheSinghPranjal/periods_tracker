@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
@@ -131,3 +132,11 @@ class BackupCipher {
     }
   }
 }
+
+// Top-level on purpose: a closure sent to an isolate carries everything in its
+// enclosing scope, and a widget's state cannot be sent between isolates.
+Future<Uint8List> sealBackupInBackground(String content, String password) =>
+    Isolate.run(() => const BackupCipher().encrypt(content, password));
+
+Future<String> openBackupInBackground(Uint8List bytes, String password) =>
+    Isolate.run(() => const BackupCipher().decrypt(bytes, password));
