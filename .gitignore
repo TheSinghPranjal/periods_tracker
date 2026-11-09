@@ -43,3 +43,25 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Release signing and other secrets: never commit these.
+*.jks
+*.keystore
+*.p12
+*.p8
+*.pem
+*.mobileprovision
+key.properties
+**/android/key.properties
+.env
+.env.*
+!.env.example
+**/local.properties
+google-services.json
+GoogleService-Info.plist
+
+# Build outputs that could carry release artifacts.
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip

@@ -18,7 +18,7 @@ flutter run
 
 ```bash
 flutter build apk --debug                 # Android, debug
-flutter build appbundle --release         # Android, Play Store (set up signing first)
+flutter build appbundle --release         # Android, Play Store (needs android/key.properties)
 flutter build ios --release               # iOS (needs Apple signing in Xcode)
 ```
 
@@ -30,6 +30,20 @@ Optional build-time values:
 | `LUNA_PLUS_PRODUCT_IDS` | Comma-separated store product ids. Without it, purchases stay switched off |
 
 Example: `flutter build appbundle --dart-define=LUNA_SUPPORT_EMAIL=help@example.com`
+
+## Release signing (Android)
+
+Release builds read `android/key.properties`, whose `storeFile` is relative to
+`android/`, so `storeFile=../upload-keystore.jks` points at the project root.
+Both files are git-ignored. Without `key.properties` a release build is left
+unsigned rather than falling back to the debug key.
+
+```
+storePassword=...
+keyPassword=...
+keyAlias=upload
+storeFile=../upload-keystore.jks
+```
 
 ## Tests
 
@@ -115,7 +129,7 @@ Must be done before publishing:
 
 - [ ] A qualified clinician reviews `wellness/domain/content_library.dart`, then update `kContentReviewStatus`.
 - [ ] A lawyer reviews the privacy policy and terms in `support_screens.dart`.
-- [ ] Android release signing in `android/app/build.gradle.kts` (currently the debug key).
+- [ ] Keep safe backups of `upload-keystore.jks` and `android/key.properties` outside this project.
 - [ ] Set `LUNA_SUPPORT_EMAIL`.
 - [ ] Update `kAppVersion` to match `pubspec.yaml`.
 - [ ] Complete the Play Data Safety form and the App Store privacy labels (health data).
